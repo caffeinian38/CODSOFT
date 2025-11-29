@@ -1,0 +1,130 @@
+import re
+import random
+import tkinter as tk
+from tkinter import scrolledtext
+from datetime import datetime
+
+resp = {
+    "greet": [
+    "hey! How are you?",
+    "Hi, what's up?",
+    "Yo! How can I help you today?"
+],
+
+"about": [
+    "I'm just a simple Python chatbot — nothing too fancy, but I try my best!",
+    "I’m a small rule-based bot built to chat and help out.",
+    "I don’t use real AI, I just match patterns and give responses."
+],
+
+"assist": [
+    "Sure! Tell me what you need help with.",
+    "Alright, I’m listening — what’s up?",
+    "Of course! What can I do for you?"
+],
+
+"bye": [
+    "Alright, take care! See you soon.",
+    "Goodbye! Have a great day ahead.",
+    "Bye! Catch you later."
+],
+
+"joke": [
+    "Why did the laptop go to therapy? Too many tabs open.",
+    "I tried to catch some fog… but I mist.",
+    "My computer told me a joke once… but it didn’t land. No sense of humor!"
+],
+
+"mood": [
+    "I'm feeling good! Thanks for asking.",
+    "Pretty great actually — ready to chat!",
+    "All good here. How about you?"
+],
+
+"fallback": [
+    "Hmm, I’m not sure I understood that.",
+    "Could you say that a bit differently?",
+    "I might not know this one yet — try rephrasing!"
+]
+
+}
+
+class Bot:
+    def __init__(self):
+        self.pats = {
+            r"\b(hi|hello|hey)\b": "greet",
+            r"\b(who are you|what are you)\b": "about",
+            r"\b(help|assist|support)\b": "assist",
+            r"\b(bye|exit|quit)\b": "bye",
+            r"\b(joke|funny)\b": "joke",
+            r"\b(how are you)\b": "mood",
+        }
+    def det(self, t):
+        for p, key in self.pats.items():
+            if re.search(p, t):
+                return key
+        return None
+    def solve(self, msg):
+        mat = re.search(r"(calculate|solve|what is)\s*([0-9\.\+\-\*\/\(\)\s]+)", msg)
+        if not mat:
+            return None
+        try:
+            expr = mat.group(2)
+            res = eval(expr, {"__builtins__": {}})
+            return f"Result: {res}"
+        except:
+            return "Invalid math expression."
+    def re(self, msg):
+        msg = msg.lower()
+        
+        math = self.solve(msg)
+        if math:
+            return math
+        
+        if "time" in msg:
+            return f"Current time: {datetime.now().strftime('%H:%M:%S')}"
+       
+        if "date" in msg or "today" in msg:
+            return f"Today is {datetime.now().strftime('%A, %B %d, %Y')}"
+        
+        key = self.det(msg)
+        if key:
+            return random.choice(resp[key])
+        return random.choice(resp["fallback"])
+
+class ui:
+    def __init__(self, r):
+        self.bot = Bot()
+        r.title("Chatbot")
+        r.geometry("600x520")
+
+        self.ch = scrolledtext.ScrolledText(r, state="disabled", wrap="word")
+        self.ch.place(x=10, y=10, width=580, height=400)
+
+        self.msg = tk.StringVar()
+        entry = tk.Entry(r, textvariable=self.msg)
+        entry.place(x=10, y=430, width=470, height=32)
+        entry.bind("<Return>", self.send)
+        tk.Button(r, text="Send", command=self.send).place(x=500, y=430, width=90, height=32)
+        self.write("Chatbot", "Hello! I'm ready to chat.")
+    def write(self, sender, text):
+        self.ch.config(state="normal")
+        self.ch.insert(tk.END, f"{sender}: {text}\n\n")
+        self.ch.config(state="disabled")
+        self.ch.see(tk.END)
+    def send(self, event=None):
+        user = self.msg.get().strip()
+        if not user:   
+           return   
+        self.write("You", user)
+        self.msg.set("")
+        re = self.bot.rep(user)
+        self.write("Chatbot", re)
+        if re.search(r"\b(bye|exit|quit)\b", user.lower()):
+            r.after(1200, r.destroy)
+
+
+if __name__ == "__main__":
+    r = tk.Tk()
+    ui(r)
+    r.mainloop()
