@@ -1,0 +1,101 @@
+import tkinter as tk
+from tkinter import messagebox
+
+def win(b, p):
+    ways = [
+        [0,1,2], [3,4,5], [6,7,8],
+        [0,3,6], [1,4,7], [2,5,8],
+        [0,4,8], [2,4,6]
+    ]
+    return any(b[x] == b[y] == b[z] == p for x, y, z in ways)
+
+def full(b):
+    return all(v != "" for v in b)
+
+def solve(b, d, ai_turn):
+    if win(b, "O"):
+        return 10 - d
+    if win(b, "X"):
+        return d - 10
+    if full(b):
+        return 0
+
+    if ai_turn:
+        best = -999
+        for i in range(9):
+            if b[i] == "":
+                b[i] = "O"
+                scr = solve(b, d+1, False)
+                b[i] = ""
+                best = max(best, scr)
+        return best
+    else:
+        best = 999
+        for i in range(9):
+            if b[i] == "":
+                b[i] = "X"
+                scr = solve(b, d+1, True)
+                b[i] = ""
+                best = min(best, scr)
+        return best
+
+def ai():
+    best = -999
+    move = -1
+    for i in range(9):
+        if brd[i] == "":
+            brd[i] = "O"
+            scr = solve(brd, 0, False)
+            brd[i] = ""
+            if scr > best:
+                best = scr
+                move = i
+
+    if move != -1:
+        brd[move] = "O"
+        btns[move].config(text="O", state="disabled")
+
+        if win(brd, "O"):
+            messagebox.showinfo("Tic-Tac-Toe", "AI won!")
+            reset()
+        elif full(brd):
+            messagebox.showinfo("Tic-Tac-Toe", "Draw!")
+            reset()
+
+def play(i):
+    if brd[i] == "":
+        brd[i] = "X"
+        btns[i].config(text="X", state="disabled")
+
+        if win(brd, "X"):
+            messagebox.showinfo("Tic-Tac-Toe", "You win!")
+            reset()
+        elif full(brd):
+            messagebox.showinfo("Tic-Tac-Toe", "Draw!")
+            reset()
+        else:
+            ai()
+
+def reset():
+    for i in range(9):
+        brd[i] = ""
+        btns[i].config(text="", state="normal")
+
+root = tk.Tk()
+root.title("Tic-Tac-Toe (X vs O)")
+
+brd = [""] * 9
+btns = []
+
+wrap = tk.Frame(root)
+wrap.pack()
+
+for i in range(9):
+    b = tk.Button(wrap, text="", width=5, height=2, font=("Arial", 22),
+                  command=lambda i=i: play(i))
+    b.grid(row=i//3, column=i%3)
+    btns.append(b)
+
+tk.Button(root, text="Reset", width=10, command=reset).pack(pady=10)
+
+root.mainloop()
