@@ -1,0 +1,121 @@
+import tkinter as tk
+from tkinter import messagebox
+import math
+
+movies = [
+    {"id": 1, "title": "The Matrix", "genres": ["Action", "Sci-Fi"], "tags": ["robots", "future", "virtual"]},
+    {"id": 2, "title": "John Wick", "genres": ["Action", "Thriller"], "tags": ["hitman", "revenge", "guns"]},
+    {"id": 3, "title": "Interstellar", "genres": ["Sci-Fi", "Drama"], "tags": ["space", "time", "family"]},
+    {"id": 4, "title": "The Notebook", "genres": ["Romance", "Drama"], "tags": ["love", "relationship", "tearjerker"]},
+    {"id": 5, "title": "Inception", "genres": ["Action", "Sci-Fi"], "tags": ["dream", "heist", "mind"]},
+    {"id": 6, "title": "La La Land", "genres": ["Romance", "Musical"], "tags": ["music", "love", "dreams"]},
+]
+
+
+
+def build_vocab(data):
+    vocab = []
+    for m in data:
+        for g in m["genres"] + m["tags"]:
+            if g not in vocab:
+                vocab.append(g)
+    return vocab
+
+vocab = build_vocab(movies)
+
+def to_vec(movie, vocab):
+    vec = []
+    for t in vocab:
+        vec.append(1 if (t in movie["genres"] or t in movie["tags"]) else 0)
+    return vec
+
+movie_vec = {m["id"]: to_vec(m, vocab) for m in movies}
+
+def cos_sim(a, b):
+    dot = 0
+    na = 0
+    nb = 0
+    for x, y in zip(a, b):
+        dot += x * y
+        na += x * x
+        nb += y * y
+    if na == 0 or nb == 0:
+        return 0
+    return dot / (math.sqrt(na) * math.sqrt(nb))
+
+def user_profile(liked_ids):
+    prof = [0] * len(vocab)
+    if not liked_ids:
+        return prof
+    for mid in liked_ids:
+        v = movie_vec[mid]
+        for i in range(len(v)):
+            prof[i] += v[i]
+    n = len(liked_ids)
+    return [x / n for x in prof]
+
+def recommend(liked_ids, top_n=3):
+    prof = user_profile(liked_ids)
+    scores = []
+    for m in movies:
+        if m["id"] in liked_ids:
+            continue
+        sim = cos_sim(prof, movie_vec[m["id"]])
+        scores.append((m, sim))
+    scores.sort(key=lambda x: x[1], reverse=True)
+    return scores[:top_n]
+
+
+
+def get_likes():
+    sel = listbox.curselection()
+    liked = []
+    for i in sel:
+        liked.append(movies[i]["id"])
+    return liked
+
+def on_click():
+    liked = get_likes()
+    if not liked:
+        messagebox.showinfo("Info", "Please select at least one movie.")
+        return
+
+    recs = recommend(liked)
+
+    out.config(state="normal")
+    out.delete("1.0", tk.END)
+
+    out.insert(tk.END, "You like:\n")
+    for m in movies:
+        if m["id"] in liked:
+            out.insert(tk.END, f"- {m['title']}\n")
+
+    out.insert(tk.END, "\nRecommended:\n")
+    if not recs:
+        out.insert(tk.END, "No recommendations.\n")
+    else:
+        for mv, sc in recs:
+            out.insert(tk.END, f"- {mv['title']} (score: {sc:.3f})\n")
+
+    out.config(state="disabled")
+
+
+root = tk.Tk()
+root.title("Movie Recommender")
+root.geometry("480x420")
+
+tk.Label(root, text="Select movies you like: (Use Ctrl for multi-select)").pack(pady=5)
+
+listbox = tk.Listbox(root, selectmode=tk.MULTIPLE, height=8)
+for m in movies:
+    listbox.insert(tk.END, f"{m['title']} ({', '.join(m['genres'])})")
+listbox.pack(fill=tk.X, padx=10)
+
+tk.Button(root, text="Recommend", command=on_click).pack(pady=10)
+
+tk.Label(root, text="Results:").pack()
+
+out = tk.Text(root, height=10, state="disabled")
+out.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+
+root.mainloop()
